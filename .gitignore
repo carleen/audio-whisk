@@ -207,3 +207,6 @@ octave-workspace
 
 # Audio Files 
 *.wav
+
+# Other
+.DS_Store
