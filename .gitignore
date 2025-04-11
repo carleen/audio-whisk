@@ -204,3 +204,6 @@ codegen/
 
 # Octave session info
 octave-workspace
+
+# Audio Files 
+*.wav
