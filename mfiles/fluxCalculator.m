@@ -52,4 +52,3 @@ function [spectrogram_struct, sum_flux] = fluxCalculator(spectrogram_struct, ...
     end
    
 end
-
