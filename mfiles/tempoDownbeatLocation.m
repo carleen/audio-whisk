@@ -34,6 +34,7 @@ function [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, ...
     % For each tempo and each tempo downbeat location, get the cc_flux 
     
     cross_correlation_values = zeros(N_D, length(N_R_bpm));
+    downbeat_cross_correlation_values = zeros(N_D, length(N_R_bpm));
     
     for ind_tempo = 1:length(N_R_bps)
     
@@ -66,10 +67,11 @@ function [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, ...
             % Normalized based on max value
             interpolated_flux = interpolated_flux/max(interpolated_flux);
             
-
+            downbeat_flux = 0;
             for ii_t = 1:length(cur_downbeat_times)
                 ic = find(all_downbeat_times == cur_downbeat_times(ii_t));
                 cc_flux = cc_flux + mean(interpolated_flux(ic));
+                downbeat_flux = downbeat_flux + mean(interpolated_flux(ic));
             end
     
             % Do the same as above for the half beat times
@@ -118,10 +120,11 @@ function [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, ...
     
             for ii_t = 1:length(cur_quarterbeat_times)
                 ic = find(all_quarterbeat_times == cur_quarterbeat_times(ii_t));
-                cc_flux = cc_flux + mean(interpolated_flux(ic))*0.1;
+                cc_flux = cc_flux + mean(interpolated_flux(ic))*0.2;
             end
     
             cross_correlation_values(ind_downbeat_candidate, ind_tempo) = cc_flux;
+            downbeat_cross_correlation_values(ind_downbeat_candidate, ind_tempo) = downbeat_flux;
         end
     end
     
@@ -144,6 +147,7 @@ function [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, ...
     bpm_candidates = N_R_bpm(top_indices);
     start_time_for_candidates = max_cc_start_time(top_indices);
 
+    show_plots=0;
     if show_plots
     
         % For each of the candidates, get the start time and plot it with the flux
@@ -188,8 +192,43 @@ function [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, ...
     beat_locations.bpm_candidates = bpm_candidates;
     beat_locations.start_time_for_candidates = start_time_for_candidates;
     beat_locations.cross_correlation_values = cross_correlation_values;
+    beat_locations.downbeat_cross_correlation_values = downbeat_cross_correlation_values;
     beat_locations.downbeat_locs = downbeat_locs;
     beat_locations.top_indices = top_indices;
+
+    % Normalize candidates
+    s_i_j = zeros(size(beat_locations.downbeat_cross_correlation_values));
+    N_R_bpm = (60:1:150);
+    max_cc_val = max(beat_locations.downbeat_cross_correlation_values, [], 'all');
+    for ii=1:N_D
+        for jj=1:length(N_R_bpm)
+            s_i_j(ii,jj) = beat_locations.cross_correlation_values(ii,jj)/...
+                max_cc_val;
+        end
+    end
+    
+    beat_locations.normalized=s_i_j;
+    
+    best_score = zeros(length(N_R_bpm),1);
+    best_score_time_loc = zeros(length(N_R_bpm),1);
+    for ii=1:length(N_R_bpm)
+        cur_candidate = beat_locations.normalized(:,ii);
+        cur_c_times = downbeat_locs(:,ii);
+        [sorted_values, sorted_indices] = sort(cur_candidate, 'descend');
+        max_score = sorted_values(1);
+        max_time_loc = cur_c_times(sorted_indices(1));
+        best_score(ii) = max_score;
+        best_score_time_loc(ii) = max_time_loc;
+    end
+    
+    beat_locations.best_score_indices_normalized = best_score;
+    [sorted_values, sorted_indices] = sort(beat_locations.best_score_indices_normalized, 'descend');
+    top_15_indices = sorted_indices(1:15);
+
+    beat_locations.best_bpm_from_normalized = N_R_bpm(top_15_indices);
+    beat_locations.cross_correlation_values = best_score(top_15_indices);
+    beat_locations.cc_max_time_loc = best_score_time_loc(top_15_indices);
+
 
 end
 
