@@ -4,7 +4,7 @@ clear; clc; close all;
 % Get the files of interests
 songloc = '/Users/boyercm1/Documents/misc/tempo_processing/audio_files/sparhawk_white-roses/*.wav';
 ii = 2; % Index of song to use
-show_plots = 0;
+show_plots = 1;
 
 nfft = 512; % Gives time resolution of ~ 10ms
 noverlap = 0; % No overlap needed
@@ -35,29 +35,26 @@ f_bins = spectrogram_struct(1).f;
 
 %% Tempo and Downbeat Location Estimation
 % Start Time
-t_a = 50;
+t_a = 0;
 % Amount of time to look at
-time_window = 2;
+time_window = 2; % in seconds
 % Number of downbeats to consider
-N_D = 100;
+N_D = 50;
+
+end_time_seconds = round(max(t_bins));
 
 bpm_ests_arr = zeros(100,1);
 show_plots = 0;
-for ii=1:100
-    t_a = ii; % Start time
+frames = (1:time_window:end_time_seconds-time_window*2);
+
+max_times = zeros(15,length(frames));
+max_bpms = zeros(15, length(frames));
+max_cc_vals = zeros(15, length(frames));
+
+for ii=1:length(frames)
+    t_a = frames(ii); % Start time
     [beat_locations] = tempoDownbeatLocation(sum_flux, t_bins, t_a, time_window, N_D, show_plots);
-    bpm_est = beat_locations.bpm_candidates;
-    upper = bpm_est(bpm_est>100);
-    bpm_ests_arr(ii) = upper(1);
+    max_times(:,ii) = beat_locations.cc_max_time_loc;
+    max_bpms(:,ii) = beat_locations.best_bpm_from_normalized';
+    max_cc_vals(:,ii) = beat_locations.cross_correlation_values;
 end
-
-
-%% TO DO:
-% For each candidate tempos, the 10-15 best candidate downbeat locations
-% are selected
-
-
-
-
-
-
